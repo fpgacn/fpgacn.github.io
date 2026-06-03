@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custom Bingo</title>
+<style>
+  body { font-family: sans-serif; max-width: 640px; margin: 0 auto; padding: 1.5rem; background: #fff; color: #111; }
+  h1 { text-align: center; font-size: 22px; font-weight: 500; letter-spacing: 2px; margin: 0 0 4px; }
+  #subheader { text-align: center; font-size: 13px; color: #666; margin: 0 0 1.2rem; }
+  .bingo-letters { display: flex; justify-content: center; gap: 6px; margin-bottom: 6px; }
+  .bl { width: 106px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 500; border-radius: 8px 8px 0 0; }
+  .bl-B { background:#EEEDFE; color:#3C3489; }
+  .bl-I { background:#E6F1FB; color:#0C447C; }
+  .bl-N { background:#EAF3DE; color:#27500A; }
+  .bl-G { background:#FAEEDA; color:#633806; }
+  .bl-O { background:#FAECE7; color:#712B13; }
+  .grid { display: grid; grid-template-columns: repeat(5, 106px); gap: 6px; justify-content: center; }
+  .cell { width: 106px; height: 76px; border-radius: 8px; border: 0.5px solid #ccc; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .cell textarea { width: 100%; height: 100%; border: none; background: transparent; resize: none; font-family: sans-serif; font-size: 12px; color: #111; text-align: center; padding: 6px; box-sizing: border-box; line-height: 1.4; outline: none; }
+  .cell textarea:focus { background: #f5f5f5; }
+  .cell.free-cell { background: #534AB7; }
+  .cell.free-cell span { font-size: 11px; font-weight: 500; color: #EEEDFE; letter-spacing: 0.5px; }
+  .cell.play-cell { cursor: pointer; transition: background 0.12s; }
+  .cell.play-cell:hover:not(.marked):not(.free-cell) { background: #f5f5f5; }
+  .cell.marked { background: #534AB7; }
+  .cell.marked span { color: #EEEDFE !important; }
+  .cell.win-cell { background: #1D9E75; }
+  .cell.win-cell span { color: #E1F5EE !important; }
+  .play-label { font-size: 12px; font-weight: 500; color: #111; text-align: center; padding: 6px; line-height: 1.4; word-break: break-word; }
+  .btn-row { display: flex; gap: 10px; justify-content: center; margin-top: 1.2rem; }
+  button { cursor: pointer; border-radius: 8px; border: 1px solid #ccc; background: transparent; color: #111; font-size: 14px; padding: 8px 20px; font-family: sans-serif; }
+  button:hover { background: #f5f5f5; }
+  button:active { transform: scale(0.98); }
+  .btn-primary { background: #534AB7; color: #EEEDFE; border-color: #3C3489; }
+  .btn-primary:hover { background: #3C3489; }
+  .status { text-align: center; font-size: 13px; color: #666; min-height: 20px; margin: 8px 0 4px; }
+  .win-banner { text-align: center; padding: 0.75rem 1rem; background: #E1F5EE; border: 0.5px solid #5DCAA5; border-radius: 10px; margin-bottom: 1rem; color: #085041; font-size: 17px; font-weight: 500; display: none; }
+  .hint { font-size: 12px; color: #999; text-align: center; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<h1>B I N G O</h1>
+<p id="subheader">Fill in each square, then press Play to start the game</p>
+<div id="win-banner" class="win-banner">Bingo! You got a line!</div>
+
+<div class="bingo-letters">
+  <div class="bl bl-B">B</div>
+  <div class="bl bl-I">I</div>
+  <div class="bl bl-N">N</div>
+  <div class="bl bl-G">G</div>
+  <div class="bl bl-O">O</div>
+</div>
+<div class="grid" id="grid"></div>
+
+<div class="btn-row" id="btn-row"></div>
+<div class="status" id="status"></div>
+<div class="hint" id="hint"></div>
+
+<script>
+const COL = ['B','I','N','G','O'];
+let mode = 'setup';
+let marked = Array(25).fill(false);
+marked[12] = true;
+
+function getTexts() {
+  const texts = [];
+  for (let i = 0; i < 25; i++) {
+    if (i === 12) { texts.push('FREE'); continue; }
+    const ta = document.getElementById('ta-' + i);
+    texts.push(ta ? ta.value.trim() : '');
+  }
+  return texts;
+}
+
+function renderSetup() {
+  mode = 'setup';
+  marked = Array(25).fill(false);
+  marked[12] = true;
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  const saved = JSON.parse(localStorage.getItem('bingo-texts') || 'null') || Array(25).fill('');
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 5; c++) {
+      const idx = c * 5 + r;
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      if (idx === 12) {
+        cell.classList.add('free-cell');
+        cell.innerHTML = '<span>FREE</span>';
+      } else {
+        const ta = document.createElement('textarea');
+        ta.id = 'ta-' + idx;
+        ta.placeholder = COL[c] + ' square';
+        ta.value = saved[idx] || '';
+        cell.appendChild(ta);
+      }
+      grid.appendChild(cell);
+    }
+  }
+  const btnRow = document.getElementById('btn-row');
+  btnRow.innerHTML = '';
+  const playBtn = document.createElement('button');
+  playBtn.className = 'btn-primary';
+  playBtn.textContent = 'Play';
+  playBtn.onclick = startPlay;
+  const clearBtn = document.createElement('button');
+  clearBtn.textContent = 'Clear all';
+  clearBtn.onclick = () => { document.querySelectorAll('[id^=ta-]').forEach(t => t.value = ''); };
+  btnRow.appendChild(playBtn);
+  btnRow.appendChild(clearBtn);
+  document.getElementById('status').textContent = '';
+  document.getElementById('hint').textContent = '';
+  document.getElementById('subheader').textContent = 'Fill in each square, then press Play to start the game';
+  document.getElementById('win-banner').style.display = 'none';
+}
+
+function startPlay() {
+  const texts = getTexts();
+  const empty = texts.filter((t, i) => i !== 12 && t === '').length;
+  if (empty > 0) {
+    document.getElementById('status').textContent = empty + ' square' + (empty > 1 ? 's are' : ' is') + ' still empty — fill them in first';
+    return;
+  }
+  try { localStorage.setItem('bingo-texts', JSON.stringify(texts)); } catch(e) {}
+  mode = 'play';
+  marked = Array(25).fill(false);
+  marked[12] = true;
+  renderPlay(texts);
+}
+
+function renderPlay(texts) {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 5; c++) {
+      const idx = c * 5 + r;
+      const cell = document.createElement('div');
+      cell.className = 'cell play-cell';
+      if (idx === 12) {
+        cell.classList.add('free-cell');
+        cell.innerHTML = '<span>FREE</span>';
+      } else {
+        const lbl = document.createElement('span');
+        lbl.className = 'play-label';
+        lbl.textContent = texts[idx];
+        cell.appendChild(lbl);
+        cell.onclick = () => toggleMark(idx, texts);
+      }
+      if (marked[idx] && idx !== 12) cell.classList.add('marked');
+      cell.id = 'pcell-' + idx;
+      grid.appendChild(cell);
+    }
+  }
+  const btnRow = document.getElementById('btn-row');
+  btnRow.innerHTML = '';
+  const editBtn = document.createElement('button');
+  editBtn.textContent = 'Edit card';
+  editBtn.onclick = renderSetup;
+  const resetBtn = document.createElement('button');
+  resetBtn.textContent = 'Reset marks';
+  resetBtn.onclick = () => {
+    marked = Array(25).fill(false);
+    marked[12] = true;
+    document.getElementById('win-banner').style.display = 'none';
+    renderPlay(texts);
+  };
+  btnRow.appendChild(editBtn);
+  btnRow.appendChild(resetBtn);
+  document.getElementById('subheader').textContent = 'Click squares to mark them off';
+  document.getElementById('status').textContent = '';
+  document.getElementById('hint').textContent = 'Tap a square when it happens — get a full line to win';
+}
+
+function toggleMark(idx, texts) {
+  marked[idx] = !marked[idx];
+  const cell = document.getElementById('pcell-' + idx);
+  if (marked[idx]) cell.classList.add('marked');
+  else cell.classList.remove('marked');
+  checkWin();
+}
+
+function checkWin() {
+  const lines = [
+    [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],
+    [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],
+    [0,6,12,18,24],[4,8,12,16,20]
+  ];
+  for (const line of lines) {
+    if (line.every(i => marked[i])) {
+      line.forEach(i => {
+        const el = document.getElementById('pcell-' + i);
+        if (el) { el.classList.remove('marked'); el.classList.add('win-cell'); }
+      });
+      document.getElementById('win-banner').style.display = 'block';
+      return;
+    }
+  }
+}
+
+renderSetup();
+</script>
+</body>
+</html>
