@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FPG Account Townhall</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:sans-serif;background:#fff;color:#111;}
+.wrap{padding:0.75rem;}
+.title{text-align:center;font-size:20px;font-weight:500;letter-spacing:3px;margin-bottom:3px;}
+.sub{text-align:center;font-size:12px;color:#666;margin-bottom:10px;}
+.win-banner{display:none;text-align:center;padding:10px 14px;background:#E1F5EE;border:1px solid #5DCAA5;border-radius:8px;margin-bottom:10px;color:#085041;font-size:14px;font-weight:500;}
+.letters{display:flex;gap:2px;margin-bottom:2px;}
+.bl{flex:1;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;border-radius:5px 5px 0 0;}
+.bl-B{background:#EEEDFE;color:#3C3489;} .bl-I{background:#E6F1FB;color:#0C447C;}
+.bl-N{background:#EAF3DE;color:#27500A;} .bl-G{background:#FAEEDA;color:#633806;}
+.bl-O{background:#FAECE7;color:#712B13;}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;}
+.cell{aspect-ratio:1;border-radius:5px;border:1px solid #ddd;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:3px;-webkit-tap-highlight-color:transparent;user-select:none;transition:background 0.1s,transform 0.08s;}
+.cell:active{transform:scale(0.91);}
+.cell.free{background:#534AB7;cursor:default;}
+.cell.free span{font-size:9px;font-weight:500;color:#EEEDFE;letter-spacing:0.5px;}
+.cell.marked{background:#534AB7;}
+.cell.marked .lbl{color:#EEEDFE;}
+.cell.won{background:#1D9E75;}
+.cell.won .lbl{color:#E1F5EE;}
+.lbl{font-size:clamp(7px,2.5vw,11px);font-weight:500;color:#111;text-align:center;line-height:1.2;word-break:break-word;hyphens:auto;}
+.hint{text-align:center;font-size:11px;color:#999;margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="title">B I N G O</p>
+  <p class="sub">Tap the square once you know the answer</p>
+  <div id="win-banner" class="win-banner">🎉 BINGO!</div>
+  <div class="letters">
+    <div class="bl bl-B">B</div><div class="bl bl-I">I</div><div class="bl bl-N">N</div><div class="bl bl-G">G</div><div class="bl bl-O">O</div>
+  </div>
+  <div class="grid" id="grid"></div>
+  <p class="hint">Row, column, or diagonal wins</p>
+</div>
+<script>
+const ALL=["My 6-pack used to be featured in Straits Times","My Partner works in Accenture","I don't look Chinese but I'm fluent in Chinese","I'm getting married this month","I am Accenture Boomerang",
+  "I have done sky diving","I almost broke my leg so I need transport allowance","I have 4 daughters","My second kid will be live before OneSAP","I was an air traffic controller in AirForce",
+  "I won a toto worth 2,000 SGD","I have done ballroom dancing for 10 years","I have an identical twin","I am a June baby",
+  "I can make balloon animals & perform Chinese Yo-Yo","I have a pair of adult teeth missing","I have completed an iron man race","Going forward","30,000-foot view",
+  "Double-click on that","Can you see my screen?","Learnings","Value add","Stakeholder buy-in","Transparency",
+  "Agile approach","Pain points","Deliverables","Wheelhouse","Let's table that"
+];
+let squares=[],marked=Array(25).fill(false),won=false;
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+function build(){const p=shuffle(ALL).slice(0,24);squares=[];for(let i=0;i<25;i++)squares.push(i===12?'FREE':p[i<12?i:i-1]);marked=Array(25).fill(false);marked[12]=true;won=false;}
+function render(){
+  const g=document.getElementById('grid');g.innerHTML='';
+  document.getElementById('win-banner').style.display='none';
+  for(let r=0;r<5;r++){for(let c=0;c<5;c++){
+    const idx=c*5+r,cell=document.createElement('div');
+    cell.className='cell';cell.id='c'+idx;
+    if(idx===12){cell.classList.add('free');cell.innerHTML='<span>FREE</span>';}
+    else{const s=document.createElement('span');s.className='lbl';s.textContent=squares[idx];cell.ontouchstart=()=>{};cell.onclick=()=>toggle(idx);cell.appendChild(s);}
+    if(marked[idx]&&idx!==12)cell.classList.add('marked');
+    g.appendChild(cell);
+  }}
+}
+function toggle(i){if(won)return;marked[i]=!marked[i];const el=document.getElementById('c'+i);el.classList.toggle('marked',marked[i]);check();}
+function check(){
+  const lines=[[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],
+    [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],
+    [0,6,12,18,24],[4,8,12,16,20]];
+  for(const line of lines){if(line.every(i=>marked[i])){won=true;line.forEach(i=>{const el=document.getElementById('c'+i);if(el){el.classList.remove('marked');el.classList.add('won');}});document.getElementById('win-banner').style.display='block';return;}}
+}
+build();render();
+</script>
+</body>
+</html>
