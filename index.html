@@ -28,7 +28,6 @@ body{font-family:sans-serif;background:#fff;color:#111;}
 .ans:focus{border-top-color:#534AB7;}
 .cell.answered .ans,.cell.bingo-won .ans{border-top-color:#5DCAA5;color:#E1F5EE;}
 .hint{text-align:center;font-size:11px;color:#999;margin-top:8px;}
-.new-btn{display:block;margin:10px auto 0;padding:6px 18px;font-size:12px;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -41,7 +40,6 @@ body{font-family:sans-serif;background:#fff;color:#111;}
   </div>
   <div class="grid" id="grid"></div>
   <p class="hint">Row, column, or diagonal wins</p>
-  <button class="new-btn" onclick="newGame()">New card</button>
 </div>
 <script>
 const ALL=[
@@ -102,7 +100,6 @@ function render(){
     g.appendChild(cell);
   }}
 }
-function newGame(){build();render();}
 build();render();
 </script>
 </body>
